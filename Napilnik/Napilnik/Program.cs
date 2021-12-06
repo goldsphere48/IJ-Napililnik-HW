@@ -1,40 +1,28 @@
 ﻿class Weapon
 {
-	public event Action? OutOfBullets;
 
 	private readonly int _damage;
 	private readonly int _clipCapacity;
 	private int _currentBullets;
 
+	public event Action OutOfBullets = default!;
+
 	public Weapon(int damage, int clipCapacity)
 	{
-		if (damage < 0) {
+		if (damage < 0)
 			throw new ArgumentOutOfRangeException(nameof(damage));
-		}
 
-		if (clipCapacity <= 0) {
+		if (clipCapacity <= 0)
 			throw new ArgumentOutOfRangeException(nameof(clipCapacity));
-		}
 
 		_clipCapacity = clipCapacity;
 		_damage = damage;
 	}
 
-	public int NeedToRestore => _clipCapacity - _currentBullets;
-	public bool IsEmpty => _currentBullets == 0;
-
-	public void Reload(int bulletsCount)
-	{
-		if (bulletsCount < 0 || bulletsCount + _currentBullets > NeedToRestore) {
-			throw new ArgumentOutOfRangeException(nameof(bulletsCount));
-		}
-
-		_currentBullets += bulletsCount;
-	}
-
 	public bool TryFire(IDamageable player)
 	{
-		if (_currentBullets > 0) {
+		if (_currentBullets > 0) 
+		{
 			_currentBullets -= 1;
 			player.TakeDamage(_damage);
 			return true;
@@ -57,20 +45,20 @@ public class Health : IDamageable
 
 	public Health(int value)
 	{
-		if (value < 0) {
+		if (value < 0)
 			throw new ArgumentOutOfRangeException(nameof(value));
-		}
+
 		Value = value;
 	}
 
 	public void TakeDamage(int damage)
 	{
-		if (damage < 0) {
+		if (damage < 0)
 			throw new ArgumentOutOfRangeException(nameof(damage));
-		}
 
 		Value -= damage;
-		if (Value < 0) {
+		if (Value < 0) 
+		{
 			Value = 0;
 			Die?.Invoke();
 		}
@@ -97,30 +85,19 @@ class Player : IDamageable
 class Bot
 {
 	private readonly Weapon _weapon;
-	private int _bulletsStock;
 
 	public Bot(Weapon weapon, int bulletsStock)
 	{
 		_weapon = weapon ?? throw new ArgumentNullException(nameof(weapon));
 
-		if (bulletsStock < 0) {
+		if (bulletsStock < 0)
 			throw new ArgumentOutOfRangeException(nameof(bulletsStock));
-		}
-
-		_bulletsStock = bulletsStock;
 	}
 
 	public void OnSeePlayer(Player player)
 	{
-		if (player.Dead) {
+		if (player.Dead)
 			return;
-		}
-
-		if (_weapon.IsEmpty && _bulletsStock > 0) {
-			var bulletsToReload = Math.Min(_bulletsStock, _weapon.NeedToRestore);
-			_weapon.Reload(bulletsToReload);
-			_bulletsStock -= bulletsToReload;
-		}
 
 		_weapon.TryFire(player);
 	}
