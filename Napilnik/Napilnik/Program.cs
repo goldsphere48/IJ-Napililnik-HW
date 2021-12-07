@@ -27,16 +27,13 @@ class Warehouse : GoodsContainer
 {
 	public bool IsGoodEnough(Good good, int count)
 	{
-		if (count < 0) {
+		if (count < 0)
 			throw new ArgumentOutOfRangeException(nameof(count));
-		}
 
 		return GetGoodCount(good) >= count;
 	}
 
 	public bool IsAllGoodsEnough(IEnumerable<GoodCountPair> cells) => cells.All(c => IsGoodEnough(c.Good, c.Count));
-
-	public void Ship(Good good, int count) => Add(good, count);
 }
 
 class GoodsContainer : IEnumerable<GoodCountPair>
@@ -50,56 +47,47 @@ class GoodsContainer : IEnumerable<GoodCountPair>
 
 	public int GetGoodCount(Good good)
 	{
-		if (good == null) {
+		if (good == null)
 			throw new ArgumentOutOfRangeException(nameof(good));
-		}
 
-		if (!_goods.ContainsKey(good)) {
+		if (!_goods.ContainsKey(good))
 			return 0;
-		}
 
 		return _goods[good];
 	}
 
 	public virtual void Add(Good good, int count)
 	{
-		if (count < 0) {
+		if (count < 0)
 			throw new ArgumentOutOfRangeException(nameof(count));
-		}
-		if (good == null) {
+
+		if (good == null)
 			throw new ArgumentOutOfRangeException(nameof(good));
-		}
 
 		if (!_goods.ContainsKey(good))
-		{
 			_goods[good] = 0;
-		}
+		
 		_goods[good] += count;
 	}
 
 	public virtual void Remove(Good good, int count)
 	{
-		if (count < 0) {
+		if (count < 0)
 			throw new ArgumentOutOfRangeException(nameof(count));
-		}
 
-		if (good == null) {
+		if (good == null)
 			throw new ArgumentOutOfRangeException(nameof(good));
-		}
 
-		if (!_goods.ContainsKey(good)) {
+		if (!_goods.ContainsKey(good))
 			throw new InvalidOperationException();
-		}
 
-		if (_goods[good] < count) {
+		if (_goods[good] < count)
 			throw new InvalidOperationException();
-		}
 
 		_goods[good] -= count;
 
-		if (_goods[good] == 0) {
+		if (_goods[good] == 0)
 			_goods.Remove(good);
-		}
 	}
 
 	public void Clear() => _goods.Clear();
@@ -136,23 +124,21 @@ class Cart : GoodsContainer
 
 	public override void Add(Good good, int count)
 	{
-		if (!_warehouse.IsGoodEnough(good, count)) {
+		if (!_warehouse.IsGoodEnough(good, count))
 			throw new InvalidOperationException();
-		}
+
 		// Пока что не убираем из склада товар, ведь мы ещё не оформили заказ
 		base.Add(good, count);
 	}
 
 	public Order Order()
 	{
-		if (!_warehouse.IsAllGoodsEnough(this)) {
+		if (!_warehouse.IsAllGoodsEnough(this))
 			throw new InvalidOperationException();
-		}
 
 		// Опустошаем склад в момент оформления заказа
-		foreach (var cell in this) {
+		foreach (var cell in this)
 			_warehouse.Remove(cell.Good, cell.Count);
-		}
 
 		var order = new Order(this.ToList());
 		Clear();
@@ -177,9 +163,8 @@ static class Program
 {
 	public static void PrintAllGoods(Order order)
 	{
-		foreach (var cell in order.Cells) {
+		foreach (var cell in order.Cells)
 			Console.WriteLine($"{cell.Good.Name} x {cell.Count}");
-		}
 	}
 
 	public static void Main()
@@ -191,8 +176,8 @@ static class Program
 
 		Shop shop = new Shop(warehouse);
 
-		warehouse.Ship(iPhone12, 10);
-		warehouse.Ship(iPhone11, 3);
+		warehouse.Add(iPhone12, 10);
+		warehouse.Add(iPhone11, 3);
 
 		//Вывод всех товаров на складе с их остатком
 
