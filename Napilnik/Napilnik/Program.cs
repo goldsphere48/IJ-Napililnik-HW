@@ -11,42 +11,20 @@ class Good
 	}
 }
 
-class Cell : IReadOnlyCell
+struct GoodCountPair
 {
-	public Good Good { get; private set; }
-	public int Count { get; set; }
+	public Good Good { get; }
+	public int Count { get; }
 
-	public Cell(Good good, int count)
+	public GoodCountPair(Good good, int count)
 	{
 		Count = count;
 		Good = good;
 	}
-
-	public void Merge(Cell cell)
-	{
-		if (cell.Good != Good) {
-			throw new InvalidOperationException();
-		}
-
-		Count += cell.Count;
-	}
 }
 
-interface IReadOnlyCell
+class Warehouse : GoodsContainer
 {
-	Good Good { get; }
-	int Count { get; }
-}
-
-class Warehouse
-{
-	private readonly GoodsContainer _goodsContainer;
-
-	public Warehouse()
-	{
-		_goodsContainer = new GoodsContainer();
-	}
-
 	public bool IsGoodEnough(Good good, int count)
 	{
 		if (count < 0) {
@@ -56,39 +34,34 @@ class Warehouse
 		return GetGoodCount(good) >= count;
 	}
 
+	public bool IsAllGoodsEnough(IEnumerable<GoodCountPair> cells) => cells.All(c => IsGoodEnough(c.Good, c.Count));
+
+	public void Ship(Good good, int count) => Add(good, count);
+}
+
+class GoodsContainer : IEnumerable<GoodCountPair>
+{
+	private readonly Dictionary<Good, int> _goods;
+
+	public GoodsContainer()
+	{
+		_goods = new Dictionary<Good, int>();
+	}
+
 	public int GetGoodCount(Good good)
 	{
 		if (good == null) {
 			throw new ArgumentOutOfRangeException(nameof(good));
 		}
 
-		var cell = _goodsContainer.FirstOrDefault(c => c.Good == good);
-		if (cell == null) {
+		if (!_goods.ContainsKey(good)) {
 			return 0;
 		}
 
-		return cell.Count;
+		return _goods[good];
 	}
 
-	public bool IsAllGoodsEnough(IEnumerable<IReadOnlyCell> cells) => cells.All(c => IsGoodEnough(c.Good, c.Count));
-
-	public void Ship(Good good, int count) => _goodsContainer.Add(good, count);
-
-	public void Remove(Good good, int count) => _goodsContainer.Remove(good, count);
-}
-
-class GoodsContainer : IEnumerable<IReadOnlyCell>
-{
-	private readonly List<Cell> _cells;
-
-	public GoodsContainer()
-	{
-		_cells = new List<Cell>();
-	}
-
-	public int Count => _cells.Count;
-
-	public void Add(Good good, int count)
+	public virtual void Add(Good good, int count)
 	{
 		if (count < 0) {
 			throw new ArgumentOutOfRangeException(nameof(count));
@@ -97,15 +70,14 @@ class GoodsContainer : IEnumerable<IReadOnlyCell>
 			throw new ArgumentOutOfRangeException(nameof(good));
 		}
 
-		var cell = _cells.FirstOrDefault(c => c.Good == good);
-		if (cell == null) {
-			_cells.Add(new Cell(good, count));
-		} else {
-			cell.Merge(new Cell(good, count));
+		if (!_goods.ContainsKey(good))
+		{
+			_goods[good] = 0;
 		}
+		_goods[good] += count;
 	}
 
-	public void Remove(Good good, int count)
+	public virtual void Remove(Good good, int count)
 	{
 		if (count < 0) {
 			throw new ArgumentOutOfRangeException(nameof(count));
@@ -115,25 +87,24 @@ class GoodsContainer : IEnumerable<IReadOnlyCell>
 			throw new ArgumentOutOfRangeException(nameof(good));
 		}
 
-		var cell = _cells.FirstOrDefault(c => c.Good == good);
-		if (cell == null) {
+		if (!_goods.ContainsKey(good)) {
 			throw new InvalidOperationException();
 		}
 
-		if (cell.Count < count) {
+		if (_goods[good] < count) {
 			throw new InvalidOperationException();
 		}
 
-		cell.Count -= count;
+		_goods[good] -= count;
 
-		if (cell.Count == 0) {
-			_cells.Remove(cell);
+		if (_goods[good] == 0) {
+			_goods.Remove(good);
 		}
 	}
 
-	public void Clear() => _cells.Clear();
+	public void Clear() => _goods.Clear();
 
-	public IEnumerator<IReadOnlyCell> GetEnumerator() => _cells.GetEnumerator();
+	public IEnumerator<GoodCountPair> GetEnumerator() => _goods.Select(p => new GoodCountPair(p.Key, p.Value)).GetEnumerator();
 
 	IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
@@ -154,41 +125,37 @@ class Shop
 	}
 }
 
-class Cart
+class Cart : GoodsContainer
 {
 	private readonly Warehouse _warehouse;
-	private readonly GoodsContainer _goodsContainer;
 
 	public Cart(Warehouse warehouse)
 	{
 		_warehouse = warehouse;
-		_goodsContainer = new GoodsContainer();
 	}
 
-	public void Add(Good good, int count)
+	public override void Add(Good good, int count)
 	{
 		if (!_warehouse.IsGoodEnough(good, count)) {
 			throw new InvalidOperationException();
 		}
 		// Пока что не убираем из склада товар, ведь мы ещё не оформили заказ
-		_goodsContainer.Add(good, count);
+		base.Add(good, count);
 	}
-
-	public void Remove(Good good, int count) => _goodsContainer.Remove(good, count);
 
 	public Order Order()
 	{
-		if (!_warehouse.IsAllGoodsEnough(_goodsContainer)) {
+		if (!_warehouse.IsAllGoodsEnough(this)) {
 			throw new InvalidOperationException();
 		}
 
 		// Опустошаем склад в момент оформления заказа
-		foreach (var cell in _goodsContainer) {
+		foreach (var cell in this) {
 			_warehouse.Remove(cell.Good, cell.Count);
 		}
 
-		var order = new Order(_goodsContainer.ToList());
-		_goodsContainer.Clear();
+		var order = new Order(this.ToList());
+		Clear();
 
 		return order;
 	}
@@ -196,9 +163,9 @@ class Cart
 
 class Order
 {
-	public IEnumerable<IReadOnlyCell> Cells { get; }
+	public IEnumerable<GoodCountPair> Cells { get; }
 
-	public Order(IEnumerable<IReadOnlyCell> cells)
+	public Order(IEnumerable<GoodCountPair> cells)
 	{
 		Cells = cells;
 	}
@@ -225,7 +192,7 @@ static class Program
 		Shop shop = new Shop(warehouse);
 
 		warehouse.Ship(iPhone12, 10);
-		warehouse.Ship(iPhone11, 1);
+		warehouse.Ship(iPhone11, 3);
 
 		//Вывод всех товаров на складе с их остатком
 
