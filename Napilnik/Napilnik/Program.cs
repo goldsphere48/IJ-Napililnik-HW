@@ -2,34 +2,31 @@
 {
 
 	private readonly int _damage;
-	private readonly int _clipCapacity;
-	private int _currentBullets;
+    private int _bullets;
 
-	public event Action OutOfBullets = default!;
+	public event Action BulletsEnded = default!;
 
-	public Weapon(int damage, int clipCapacity)
+	public Weapon(int damage)
 	{
 		if (damage < 0)
 			throw new ArgumentOutOfRangeException(nameof(damage));
 
-		if (clipCapacity <= 0)
-			throw new ArgumentOutOfRangeException(nameof(clipCapacity));
-
-		_clipCapacity = clipCapacity;
 		_damage = damage;
 	}
 
 	public bool TryFire(IDamageable player)
 	{
-		if (_currentBullets > 0) 
+		if (_bullets > 0) 
 		{
-			_currentBullets -= 1;
+			_bullets -= 1;
 			player.TakeDamage(_damage);
-			return true;
+            
+            if (_bullets == 0)
+                BulletsEnded?.Invoke();
+            
+            return true;
 		}
-
-		OutOfBullets?.Invoke();
-		return false;
+        return false;
 	}
 }
 
@@ -107,7 +104,7 @@ static class Program
 {
 	public static void Main()
 	{
-		var bot = new Bot(new Weapon(10, 7), 100);
+		var bot = new Bot(new Weapon(10), 100);
 		var player = new Player(new Health(100));
 		bot.OnSeePlayer(player);
 	}
