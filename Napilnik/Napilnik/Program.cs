@@ -14,20 +14,19 @@
 		_damage = damage;
 	}
 
-	public bool TryFire(IDamageable player)
-	{
-		if (_bullets > 0) 
-		{
-			_bullets -= 1;
-			player.TakeDamage(_damage);
-            
-            if (_bullets == 0)
-                BulletsEnded?.Invoke();
-            
-            return true;
-		}
-        return false;
-	}
+    public bool HasBullets => _bullets > 0;
+
+    public void Fire(IDamageable player)
+    {
+        if (_bullets <= 0)
+            throw new InvalidOperationException();
+
+		_bullets -= 1;
+        player.TakeDamage(_damage);
+
+        if (_bullets == 0)
+            BulletsEnded?.Invoke();
+    }
 }
 
 interface IDamageable
@@ -96,8 +95,9 @@ class Bot
 		if (player.Dead)
 			return;
 
-		_weapon.TryFire(player);
-	}
+		if (_weapon.HasBullets)
+		    _weapon.Fire(player);
+    }
 }
 
 static class Program
