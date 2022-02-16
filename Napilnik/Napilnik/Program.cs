@@ -1,7 +1,7 @@
-﻿static class Program
+﻿class Player { }
+class Gun { }
+class TargetFollower { }
+class UnitAccess
 {
-	public static void Main()
-	{
-
-	}
+    public IReadOnlyCollection<Unit> Units { get; private set; }
 }
