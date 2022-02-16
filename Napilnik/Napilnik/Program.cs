@@ -1,7 +1,3 @@
-﻿static class Program
-{
-	public static void Main()
-	{
+﻿public void Shoot(Player player) { }
 
-	}
-}
+public string FindBy(int index) { }
