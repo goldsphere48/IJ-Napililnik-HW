@@ -1,7 +1,7 @@
 ﻿static class Program
 {
-	public static void Main()
-	{
-
-	}
+    class Weapon
+    {
+        public void Fire() { }
+    }
 }
